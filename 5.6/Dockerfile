@@ -9,7 +9,7 @@ ARG MYSQL_GID
 COPY fix-uid-gid.sh /usr/local/bin/
 RUN chmod u+x /usr/local/bin/fix-uid-gid.sh \
     && echo "mysql UID:${MYSQL_UID}, GID:${MYSQL_GID}" \
-    && /bin/bash MYSQL_UID="${MYSQL_UID}" MYSQL_GID="${MYSQL_GID}" /usr/local/bin/fix-uid-gid.sh
+    && MYSQL_UID="${MYSQL_UID}" MYSQL_GID="${MYSQL_GID}" /usr/local/bin/fix-uid-gid.sh
 # }
 
 RUN apt-get update && apt-get install -y --no-install-recommends gnupg dirmngr && rm -rf /var/lib/apt/lists/*

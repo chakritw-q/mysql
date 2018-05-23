@@ -3,6 +3,15 @@ FROM debian:stretch-slim
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN groupadd -r mysql && useradd -r -g mysql mysql
 
+# Q:20180522: Workaround for chown/mysql user not existing on host issue {
+ARG MYSQL_UID
+ARG MYSQL_GID
+COPY fix-uid-gid.sh /usr/local/bin/
+RUN chmod u+x /usr/local/bin/fix-uid-gid.sh \
+    && echo "mysql UID:${MYSQL_UID}, GID:${MYSQL_GID}" \
+    && /bin/bash MYSQL_UID="${MYSQL_UID}" MYSQL_GID="${MYSQL_GID}" /usr/local/bin/fix-uid-gid.sh
+# }
+
 RUN apt-get update && apt-get install -y --no-install-recommends gnupg dirmngr && rm -rf /var/lib/apt/lists/*
 
 # add gosu for easy step-down from root

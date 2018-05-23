@@ -3,8 +3,18 @@ FROM debian:stretch-slim
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN groupadd -r mysql && useradd -r -g mysql mysql
 
+# Q:20180522: Workaround for chown/mysql user not existing on host issue {
+ARG MYSQL_UID
+ARG MYSQL_GID
+COPY fix-uid-gid.sh /usr/local/bin/
+RUN chmod 755 /usr/local/bin/fix-uid-gid.sh \
+    && echo "mysql UID:${MYSQL_UID}, GID:${MYSQL_GID}" \
+    && MYSQL_UID="${MYSQL_UID}" MYSQL_GID="${MYSQL_GID}" /usr/local/bin/fix-uid-gid.sh
+# }
+
 RUN apt-get update && apt-get install -y --no-install-recommends gnupg dirmngr && rm -rf /var/lib/apt/lists/*
 
+# Q:20180522: Workaround for key servers issue (ref.: https://github.com/tianon/gosu/issues/35 ) {
 # add gosu for easy step-down from root
 ENV GOSU_VERSION 1.7
 RUN set -x \
@@ -12,12 +22,19 @@ RUN set -x \
 	&& wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
 	&& wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
 	&& export GNUPGHOME="$(mktemp -d)" \
-	&& gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
+        && for server in $(shuf -e ha.pool.sks-keyservers.net \
+            hkp://p80.pool.sks-keyservers.net:80 \
+            keyserver.ubuntu.com \
+            hkp://keyserver.ubuntu.com:80 \
+            pgp.mit.edu) ; do \
+            gpg --keyserver "$server" --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 && break || : ; \
+        done \
 	&& gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
 	&& rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc \
 	&& chmod +x /usr/local/bin/gosu \
 	&& gosu nobody true \
 	&& apt-get purge -y --auto-remove ca-certificates wget
+# }
 
 RUN mkdir /docker-entrypoint-initdb.d
 

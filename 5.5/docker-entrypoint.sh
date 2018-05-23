@@ -82,6 +82,11 @@ _get_config() {
 
 # allow the container to be started with `--user`
 if [ "$1" = 'mysqld' -a -z "$wantHelp" -a "$(id -u)" = '0' ]; then
+        # Q:20180522: Workaround for chown/mysql user not existing on host issue {
+        echo "mysql UID:${MYSQL_UID}, GID:${MYSQL_GID}" \
+            && MYSQL_UID="${MYSQL_UID}" MYSQL_GID="${MYSQL_GID}" /usr/local/bin/fix-uid-gid.sh
+        # }
+
 	_check_config "$@"
 	DATADIR="$(_get_config 'datadir' "$@")"
 	mkdir -p "$DATADIR"
